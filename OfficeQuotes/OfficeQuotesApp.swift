@@ -11,7 +11,7 @@ import SwiftUI
 struct OfficeQuotesApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            TheOffice()
         }
     }
 }
