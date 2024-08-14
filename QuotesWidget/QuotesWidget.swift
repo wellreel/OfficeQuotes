@@ -61,6 +61,7 @@ struct QuotesWidgetEntryView : View {
             VStack {
                 Text(entry.quote)
                     .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxHeight: 200)
                 Divider()
                 Text(entry.character)
             }

@@ -56,7 +56,7 @@ struct TheOffice: View {
             }
             .task {
                 do {
-                    quote = try await fetchData(from: "https://officeapi.akashrajpurohit.com/quote/random")
+                    quote = try await fetchData(from: "https://officeapi.akashrajpurohit.com/quote/156")
                 } catch {
                     print(error)
                 }
@@ -66,7 +66,27 @@ struct TheOffice: View {
         guard let url = URL(string: urlString) else {
             throw URLError(.badURL)
         }
-        return try await URLSession.shared.decode(from: url)
+        
+        let (data, response) = try await URLSession.shared.data(from: url)
+
+        // Print the raw response for debugging
+        if let dataString = String(data: data, encoding: .utf8) {
+            if dataString.hasPrefix("<") {
+                print("Received HTML instead of JSON.")
+                throw URLError(.cannotParseResponse)
+            }
+            print("Raw response: \(dataString)")
+        }
+
+        // Check for valid HTTP response
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+
+        // Attempt to decode the JSON
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        return try decoder.decode(T.self, from: data)
     }
 }
 
