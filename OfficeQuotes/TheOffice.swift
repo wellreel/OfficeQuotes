@@ -47,46 +47,21 @@ struct TheOffice: View {
             .navigationTitle("Office Quotes")
             }
             .padding()
+            .task(fetchQuote)
             .refreshable {
-                do {
-                    quote = try await fetchData(from: "https://officeapi.akashrajpurohit.com/quote/random")
-                } catch {
-                    print(error)
-                }
-            }
-            .task {
-                do {
-                    quote = try await fetchData(from: "https://officeapi.akashrajpurohit.com/quote/156")
-                } catch {
-                    print(error)
-                }
+                await fetchQuote()
             }
     }
-    func fetchData<T: Decodable>(from urlString: String) async throws -> T {
-        guard let url = URL(string: urlString) else {
-            throw URLError(.badURL)
+    @Sendable func fetchQuote() async {
+        do {
+            let url = URL(string: "https://officeapi.akashrajpurohit.com/quote/random")!
+            let (data, _) = try await URLSession.shared.data(from: url)
+            
+            quote = try JSONDecoder().decode(OfficeQuote.self, from: data)
+            
+        } catch {
+            print(error)
         }
-        
-        let (data, response) = try await URLSession.shared.data(from: url)
-
-        // Print the raw response for debugging
-        if let dataString = String(data: data, encoding: .utf8) {
-            if dataString.hasPrefix("<") {
-                print("Received HTML instead of JSON.")
-                throw URLError(.cannotParseResponse)
-            }
-            print("Raw response: \(dataString)")
-        }
-
-        // Check for valid HTTP response
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-            throw URLError(.badServerResponse)
-        }
-
-        // Attempt to decode the JSON
-        let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
-        return try decoder.decode(T.self, from: data)
     }
 }
 

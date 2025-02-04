@@ -22,27 +22,24 @@ struct Provider: TimelineProvider {
         
         Task {
             do {
-                // Fetch a single Office quote
-                let quote: OfficeQuote = try await fetchData(from: "https://officeapi.akashrajpurohit.com/quote/random")
+                // Fetch a random Office quote
+                let url = URL(string: "https://officeapi.akashrajpurohit.com/quote/random")!
+                let (data, _) = try await URLSession.shared.data(from: url)
+                
+                let quote = try JSONDecoder().decode(OfficeQuote.self, from: data)
                 
                 // Create a timeline entry with the fetched quote
                 let entry = SimpleEntry(date: Date(), quote: quote.quote, character: quote.character)
                 
                 // Create a timeline with the generated entry
-                let timeline = Timeline(entries: [entry], policy: .atEnd)
+                let timeline = Timeline(entries: [entry], policy: .after(Date.now.addingTimeInterval(900)))
                 completion(timeline)
+                
             } catch {
                 // Handle error
                 print("Error fetching data:", error)
             }
         }
-    }
-    
-    func fetchData<T: Decodable>(from urlString: String) async throws -> T {
-        guard let url = URL(string: urlString) else {
-            throw URLError(.badURL)
-        }
-        return try await URLSession.shared.decode(from: url)
     }
 }
 
