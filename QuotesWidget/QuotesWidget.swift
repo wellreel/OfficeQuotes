@@ -63,7 +63,6 @@ struct QuotesWidgetEntryView : View {
                 Text(entry.character)
             }
         }
-        .padding()
     }
 }
 

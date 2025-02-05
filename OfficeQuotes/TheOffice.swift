@@ -25,15 +25,16 @@ struct TheOffice: View {
             if let quote {
                 ScrollView {
                     VStack {
-                        Text(quote.quote)
-                        Divider()
-                      
                         AsyncImage(url: URL(string: quote.character_avatar_url)) { image in
                             image.resizable()
-                                .scaledToFit()
+                                .frame(maxHeight: 400)
+                                .frame(maxWidth: 600)
+                                .clipShape(RoundedRectangle(cornerRadius: 20))
                         } placeholder: {
                             Text("")
                         }
+                        Divider()
+                        Text(quote.quote)
                     }
                 }
                 .padding()
@@ -41,7 +42,7 @@ struct TheOffice: View {
                 .foregroundStyle(.white)
                 
             } else {
-                ProgressView()
+                Text("That's what she said...")
             }
         }
             .navigationTitle("Office Quotes")
