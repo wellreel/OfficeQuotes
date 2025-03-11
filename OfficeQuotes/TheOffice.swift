@@ -27,8 +27,8 @@ struct TheOffice: View {
                     VStack {
                         AsyncImage(url: URL(string: quote.character_avatar_url)) { image in
                             image.resizable()
-                                .frame(maxHeight: 400)
-                                .frame(maxWidth: 600)
+                                .frame(maxHeight: 300)
+                                .frame(maxWidth: 400)
                                 .clipShape(RoundedRectangle(cornerRadius: 20))
                         } placeholder: {
                             Text("")

@@ -59,6 +59,8 @@ struct QuotesWidgetEntryView : View {
                 Text(entry.quote)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxHeight: 200)
+                    .lineLimit(6)
+                    
                 Divider()
                 Text(entry.character)
             }
