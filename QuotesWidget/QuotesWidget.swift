@@ -53,8 +53,7 @@ struct QuotesWidgetEntryView : View {
     var entry: Provider.Entry
     
     var body: some View {
-        ZStack {
-            Color.blue
+       
             VStack {
                 Text(entry.quote)
                     .fixedSize(horizontal: false, vertical: true)
@@ -64,7 +63,8 @@ struct QuotesWidgetEntryView : View {
                 Divider()
                 Text(entry.character)
             }
-        }
+//            .background(.blue)
+        
     }
 }
 
@@ -74,7 +74,7 @@ struct QuotesWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: Provider()) { entry in
             QuotesWidgetEntryView(entry: entry)
-                .containerBackground(.blue, for: .widget)
+                .containerBackground(.cyan.gradient.secondary, for: .widget)
             
         }
         .configurationDisplayName("My Widget")

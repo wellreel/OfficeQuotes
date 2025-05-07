@@ -27,18 +27,18 @@ struct TheOffice: View {
                     VStack {
                         AsyncImage(url: URL(string: quote.character_avatar_url)) { image in
                             image.resizable()
-                                .frame(maxHeight: 300)
-                                .frame(maxWidth: 400)
-                                .clipShape(RoundedRectangle(cornerRadius: 20))
+                                .scaledToFit()
+                                .frame(maxWidth: .infinity)
                         } placeholder: {
                             Text("")
                         }
                         Divider()
                         Text(quote.quote)
+                            .font(.title3)
                     }
                 }
                 .padding()
-                .background(.blue)
+                .background(.blue.gradient.secondary)
                 .foregroundStyle(.white)
                 
             } else {
