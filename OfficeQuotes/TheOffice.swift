@@ -49,11 +49,9 @@ struct TheOffice: View {
             }
             .padding()
             .task(fetchQuote)
-            .refreshable {
-                await fetchQuote()
-            }
+      
     }
-    @Sendable func fetchQuote() async {
+        func fetchQuote() async {
         do {
             let url = URL(string: "https://officeapi.akashrajpurohit.com/quote/random")!
             let (data, _) = try await URLSession.shared.data(from: url)
