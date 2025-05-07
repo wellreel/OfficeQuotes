@@ -63,8 +63,7 @@ struct QuotesWidgetEntryView : View {
                 Divider()
                 Text(entry.character)
             }
-//            .background(.blue)
-        
+            .shadow(radius: 10)
     }
 }
 
