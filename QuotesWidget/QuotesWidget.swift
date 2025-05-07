@@ -74,7 +74,7 @@ struct QuotesWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: Provider()) { entry in
             QuotesWidgetEntryView(entry: entry)
-                .containerBackground(.cyan.gradient.secondary, for: .widget)
+                .containerBackground(.blue.gradient.secondary, for: .widget)
             
         }
         .configurationDisplayName("My Widget")
