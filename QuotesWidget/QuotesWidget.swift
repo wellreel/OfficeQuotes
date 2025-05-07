@@ -59,11 +59,12 @@ struct QuotesWidgetEntryView : View {
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxHeight: 200)
                     .lineLimit(6)
-                    
+                    .shadow(radius: 15)
                 Divider()
                 Text(entry.character)
+                    .shadow(radius: 15)
             }
-            .shadow(radius: 10)
+            .shadow(radius: 15)
     }
 }
 
