@@ -60,6 +60,7 @@ struct QuotesWidgetEntryView : View {
                     .frame(maxHeight: 200)
                     .lineLimit(6)
                 Divider()
+                
                 Text(entry.character)
             }
             .shadow(radius: 15)
