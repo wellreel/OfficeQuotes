@@ -8,13 +8,41 @@
 import WidgetKit
 import SwiftUI
 
+private enum SharedQuoteKeys {
+    static let appGroupID = "group.com.example.officequotes"
+    static let id = "widgetQuote.id"
+    static let quote = "widgetQuote.quote"
+    static let character = "widgetQuote.character"
+    static let avatarURL = "widgetQuote.avatarURL"
+}
+
+
+private struct WidgetQuote: Decodable {
+    let id: Int
+    let character: String
+    let quote: String
+    let character_avatar_url: String
+}
+
 struct Provider: TimelineProvider {
     func placeholder(in context: Context) -> SimpleEntry {
-        SimpleEntry(date: Date(), quote: "It's Britney, bitch", character: "Michael Scott")
+        SimpleEntry(
+            date: Date(),
+            id: 0,
+            quote: "It's Britney, bitch",
+            character: "Michael Scott",
+            avatarURL: ""
+        )
     }
     
     func getSnapshot(in context: Context, completion: @escaping (SimpleEntry) -> ()) {
-        let entry = SimpleEntry(date: Date(), quote: "It's Britney, bitch", character: "Michael Scott")
+        let entry = SimpleEntry(
+            date: Date(),
+            id: 0,
+            quote: "It's Britney, bitch",
+            character: "Michael Scott",
+            avatarURL: ""
+        )
         completion(entry)
     }
     
@@ -26,11 +54,18 @@ struct Provider: TimelineProvider {
                 let url = URL(string: "https://officeapi.akashrajpurohit.com/quote/random")!
                 let (data, _) = try await URLSession.shared.data(from: url)
                 
-                let quote = try JSONDecoder().decode(OfficeQuote.self, from: data)
-                
+                let quote = try JSONDecoder().decode(WidgetQuote.self, from: data)
+                storeWidgetQuote(quote)
+
                 // Create a timeline entry with the fetched quote
-                let entry = SimpleEntry(date: Date(), quote: quote.quote, character: quote.character)
-                
+                let entry = SimpleEntry(
+                    date: Date(),
+                    id: quote.id,
+                    quote: quote.quote,
+                    character: quote.character,
+                    avatarURL: quote.character_avatar_url
+                )
+
                 // Create a timeline with the generated entry
                 let timeline = Timeline(entries: [entry], policy: .after(Date.now.addingTimeInterval(900)))
                 completion(timeline)
@@ -45,26 +80,52 @@ struct Provider: TimelineProvider {
 
 struct SimpleEntry: TimelineEntry {
     let date: Date
+    let id: Int
     let quote: String
     let character: String
+    let avatarURL: String
 }
 
 struct QuotesWidgetEntryView : View {
     var entry: Provider.Entry
-    
+
     var body: some View {
-       
-            VStack {
-                Text(entry.quote)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxHeight: 200)
-                    .lineLimit(6)
-                Divider()
-                
-                Text(entry.character)
-            }
-            .shadow(radius: 15)
+        VStack {
+            Text(entry.quote)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxHeight: 200)
+                .lineLimit(6)
+            Divider()
+
+            Text(entry.character)
+        }
+        .shadow(radius: 15)
+        .widgetURL(widgetDeepLink(for: entry))
     }
+}
+
+private func widgetDeepLink(for entry: SimpleEntry) -> URL? {
+    var components = URLComponents()
+    components.scheme = "officequotes"
+    components.host = "widgetQuote"
+    components.queryItems = [
+        URLQueryItem(name: "id", value: String(entry.id)),
+        URLQueryItem(name: "quote", value: entry.quote),
+        URLQueryItem(name: "character", value: entry.character),
+        URLQueryItem(name: "avatarURL", value: entry.avatarURL)
+    ]
+    return components.url
+}
+
+private func storeWidgetQuote(_ quote: WidgetQuote) {
+    guard let defaults = UserDefaults(suiteName: SharedQuoteKeys.appGroupID) else {
+        return
+    }
+
+    defaults.set(quote.id, forKey: SharedQuoteKeys.id)
+    defaults.set(quote.quote, forKey: SharedQuoteKeys.quote)
+    defaults.set(quote.character, forKey: SharedQuoteKeys.character)
+    defaults.set(quote.character_avatar_url, forKey: SharedQuoteKeys.avatarURL)
 }
 
 struct QuotesWidget: Widget {
@@ -74,7 +135,6 @@ struct QuotesWidget: Widget {
         StaticConfiguration(kind: kind, provider: Provider()) { entry in
             QuotesWidgetEntryView(entry: entry)
                 .containerBackground(.blue.gradient.secondary, for: .widget)
-            
         }
         .configurationDisplayName("My Widget")
         .description("This is an example widget.")

@@ -18,6 +18,15 @@ struct OfficeQuote: Decodable, Identifiable {
 
 struct TheOffice: View {
     @State private var quote: OfficeQuote?
+    @State private var suppressNetworkQuote = false
+
+    private enum SharedQuoteKeys {
+        static let appGroupID = "group.com.example.officequotes"
+        static let id = "widgetQuote.id"
+        static let quote = "widgetQuote.quote"
+        static let character = "widgetQuote.character"
+        static let avatarURL = "widgetQuote.avatarURL"
+    }
 
     var body: some View {
         NavigationStack {
@@ -68,10 +77,12 @@ struct TheOffice: View {
                     }
                     .scrollIndicators(.hidden)
                     .refreshable {
+                        suppressNetworkQuote = false
                         await fetchQuote()
                     }
                     .safeAreaInset(edge: .bottom) {
                         Button {
+                            suppressNetworkQuote = false
                             Task {
                                 await fetchQuote()
                             }
@@ -98,7 +109,19 @@ struct TheOffice: View {
             }
             .navigationTitle("Office Quotes")
         }
-        .task(fetchQuote)
+        .task {
+            if quote == nil {
+                await fetchQuote()
+            }
+        }
+        .onOpenURL { url in
+            if url.scheme == "officequotes" {
+                suppressNetworkQuote = true
+                if !loadWidgetQuoteFromURL(url) {
+                    loadWidgetQuoteIfAvailable()
+                }
+            }
+        }
     }
 
     private var background: some View {
@@ -140,11 +163,75 @@ struct TheOffice: View {
             let (data, _) = try await URLSession.shared.data(for: request)
 
             let newQuote = try JSONDecoder().decode(OfficeQuote.self, from: data)
+            guard !suppressNetworkQuote else {
+                return
+            }
             withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) {
                 quote = newQuote
             }
         } catch {
             print(error)
+        }
+    }
+
+    @MainActor
+    private func loadWidgetQuoteFromURL(_ url: URL) -> Bool {
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              let items = components.queryItems else {
+            return false
+        }
+
+        func value(for name: String) -> String? {
+            items.first { $0.name == name }?.value
+        }
+
+        guard let quoteText = value(for: "quote"),
+              let character = value(for: "character") else {
+            return false
+        }
+
+        let id = Int(value(for: "id") ?? "0") ?? 0
+        let avatarURL = value(for: "avatarURL") ?? ""
+        let newQuote = OfficeQuote(
+            id: id,
+            character: character,
+            quote: quoteText,
+            character_avatar_url: avatarURL
+        )
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) {
+            quote = newQuote
+        }
+        return true
+    }
+
+    @MainActor
+    private func loadWidgetQuoteIfAvailable() {
+        guard let defaults = UserDefaults(suiteName: SharedQuoteKeys.appGroupID) else {
+            suppressNetworkQuote = false
+            Task {
+                await fetchQuote()
+            }
+            return
+        }
+        guard let quoteText = defaults.string(forKey: SharedQuoteKeys.quote),
+              let character = defaults.string(forKey: SharedQuoteKeys.character) else {
+            suppressNetworkQuote = false
+            Task {
+                await fetchQuote()
+            }
+            return
+        }
+
+        let id = defaults.integer(forKey: SharedQuoteKeys.id)
+        let avatarURL = defaults.string(forKey: SharedQuoteKeys.avatarURL) ?? ""
+        let newQuote = OfficeQuote(
+            id: id,
+            character: character,
+            quote: quoteText,
+            character_avatar_url: avatarURL
+        )
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) {
+            quote = newQuote
         }
     }
 }
