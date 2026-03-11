@@ -16,9 +16,108 @@ struct OfficeQuote: Decodable, Identifiable {
     let character_avatar_url: String
 }
 
+private struct StoredQuote: Codable, Identifiable, Equatable {
+    let id: Int
+    let character: String
+    let quote: String
+    let avatarURL: String
+    let fetchedAt: Date
+}
+
+private struct QuoteHistoryStore {
+    private static let fileName = "quotes-history.json"
+    private static let maxStoredQuotes = 500
+    private let appGroupID = "group.matthew.hundley.office"
+
+    private var fileURL: URL? {
+        FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: appGroupID)?
+            .appendingPathComponent(Self.fileName)
+    }
+
+    var exportURL: URL? {
+        ensureFileExists()
+    }
+
+    var storedCount: Int {
+        loadQuotes().count
+    }
+
+    var allQuotes: [StoredQuote] {
+        loadQuotes()
+    }
+
+    func append(_ quote: StoredQuote) {
+        var quotes = loadQuotes()
+        if quotes.contains(where: { $0.id == quote.id && $0.quote == quote.quote }) {
+            return
+        }
+        quotes.append(quote)
+        if quotes.count > Self.maxStoredQuotes {
+            quotes.removeFirst(quotes.count - Self.maxStoredQuotes)
+        }
+        saveQuotes(quotes)
+    }
+
+    private func ensureFileExists() -> URL? {
+        guard let url = fileURL else { return nil }
+        if !FileManager.default.fileExists(atPath: url.path) {
+            saveQuotes([])
+        }
+        return url
+    }
+
+    private func loadQuotes() -> [StoredQuote] {
+        guard let url = fileURL,
+              let data = try? Data(contentsOf: url),
+              let quotes = try? JSONDecoder().decode([StoredQuote].self, from: data) else {
+            return []
+        }
+        return quotes
+    }
+
+    private func saveQuotes(_ quotes: [StoredQuote]) {
+        guard let url = fileURL else { return }
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        guard let data = try? encoder.encode(quotes) else { return }
+        try? data.write(to: url, options: [.atomic])
+    }
+}
+
+private struct ExportQuotesView: View {
+    private let historyStore = QuoteHistoryStore()
+
+    var body: some View {
+        List {
+            Section {
+                HStack {
+                    Text("Saved Quotes")
+                    Spacer()
+                    Text("\(historyStore.storedCount)")
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Section("Actions") {
+                if let exportURL = historyStore.exportURL {
+                    ShareLink(item: exportURL) {
+                        Label("Export JSON", systemImage: "square.and.arrow.up")
+                    }
+                } else {
+                    Label("Export JSON", systemImage: "square.and.arrow.up")
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .navigationTitle("Export")
+    }
+}
+
 struct TheOffice: View {
     @State private var quote: OfficeQuote?
     @State private var suppressNetworkQuote = false
+    private let historyStore = QuoteHistoryStore()
 
     private enum SharedQuoteKeys {
         static let appGroupID = "group.com.example.officequotes"
@@ -108,6 +207,15 @@ struct TheOffice: View {
                 }
             }
             .navigationTitle("Office Quotes")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink {
+                        ExportQuotesView()
+                    } label: {
+                        Label("Export", systemImage: "square.and.arrow.up")
+                    }
+                }
+            }
         }
         .task {
             if quote == nil {
@@ -166,6 +274,15 @@ struct TheOffice: View {
             guard !suppressNetworkQuote else {
                 return
             }
+            historyStore.append(
+                StoredQuote(
+                    id: newQuote.id,
+                    character: newQuote.character,
+                    quote: newQuote.quote,
+                    avatarURL: newQuote.character_avatar_url,
+                    fetchedAt: Date()
+                )
+            )
             withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) {
                 quote = newQuote
             }
@@ -198,6 +315,15 @@ struct TheOffice: View {
             quote: quoteText,
             character_avatar_url: avatarURL
         )
+        historyStore.append(
+            StoredQuote(
+                id: newQuote.id,
+                character: newQuote.character,
+                quote: newQuote.quote,
+                avatarURL: newQuote.character_avatar_url,
+                fetchedAt: Date()
+            )
+        )
         withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) {
             quote = newQuote
         }
@@ -229,6 +355,15 @@ struct TheOffice: View {
             character: character,
             quote: quoteText,
             character_avatar_url: avatarURL
+        )
+        historyStore.append(
+            StoredQuote(
+                id: newQuote.id,
+                character: newQuote.character,
+                quote: newQuote.quote,
+                avatarURL: newQuote.character_avatar_url,
+                fetchedAt: Date()
+            )
         )
         withAnimation(.spring(response: 0.5, dampingFraction: 0.85)) {
             quote = newQuote

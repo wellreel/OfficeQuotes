@@ -24,6 +24,55 @@ private struct WidgetQuote: Decodable {
     let character_avatar_url: String
 }
 
+private struct StoredQuote: Codable, Identifiable, Equatable {
+    let id: Int
+    let character: String
+    let quote: String
+    let avatarURL: String
+    let fetchedAt: Date
+}
+
+private struct QuoteHistoryStore {
+    private static let fileName = "quotes-history.json"
+    private static let maxStoredQuotes = 500
+    private let appGroupID = "group.matthew.hundley.office"
+
+    private var fileURL: URL? {
+        FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: appGroupID)?
+            .appendingPathComponent(Self.fileName)
+    }
+
+    func append(_ quote: StoredQuote) {
+        var quotes = loadQuotes()
+        if quotes.contains(where: { $0.id == quote.id && $0.quote == quote.quote }) {
+            return
+        }
+        quotes.append(quote)
+        if quotes.count > Self.maxStoredQuotes {
+            quotes.removeFirst(quotes.count - Self.maxStoredQuotes)
+        }
+        saveQuotes(quotes)
+    }
+
+    private func loadQuotes() -> [StoredQuote] {
+        guard let url = fileURL,
+              let data = try? Data(contentsOf: url),
+              let quotes = try? JSONDecoder().decode([StoredQuote].self, from: data) else {
+            return []
+        }
+        return quotes
+    }
+
+    private func saveQuotes(_ quotes: [StoredQuote]) {
+        guard let url = fileURL else { return }
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        guard let data = try? encoder.encode(quotes) else { return }
+        try? data.write(to: url, options: [.atomic])
+    }
+}
+
 struct Provider: TimelineProvider {
     func placeholder(in context: Context) -> SimpleEntry {
         SimpleEntry(
@@ -56,6 +105,15 @@ struct Provider: TimelineProvider {
                 
                 let quote = try JSONDecoder().decode(WidgetQuote.self, from: data)
                 storeWidgetQuote(quote)
+                QuoteHistoryStore().append(
+                    StoredQuote(
+                        id: quote.id,
+                        character: quote.character,
+                        quote: quote.quote,
+                        avatarURL: quote.character_avatar_url,
+                        fetchedAt: Date()
+                    )
+                )
 
                 // Create a timeline entry with the fetched quote
                 let entry = SimpleEntry(
